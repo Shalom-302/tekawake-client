@@ -30,11 +30,22 @@ export default function TopicsSidebar() {
     });
     const { count } = veilleService.useVeillesCount();
 
+    // Un cluster est ouvert ? Sur mobile on masque alors la liste pour laisser
+    // toute la place au contenu (sinon il faut scroller toute la liste).
+    const params = useParams<{ topic_id?: string | string[] }>();
+    const topicParam = params?.topic_id;
+    const hasSelection = Boolean(Array.isArray(topicParam) ? topicParam[0] : topicParam);
+
     const list = veilles ?? [];
     const totalPages = count ? Math.ceil(count / VEILLES_PER_PAGE) : 1;
 
     return (
-        <aside className="border-b md:border-b-0 md:border-r border-black/10 w-full md:w-[380px] shrink-0 md:sticky md:top-0 md:h-screen md:overflow-auto">
+        <aside
+            className={cn(
+                "border-b md:border-b-0 md:border-r border-black/10 w-full md:w-[380px] shrink-0 md:sticky md:top-0 md:h-screen md:overflow-auto",
+                hasSelection && "hidden md:block",
+            )}
+        >
             <div className="flex flex-col">
                 <div className="px-4 py-6 border-b border-black/5 sticky top-0 bg-white z-10">
                     <h1 className="text-lg font-semibold">{"Veilles & sujets"}</h1>

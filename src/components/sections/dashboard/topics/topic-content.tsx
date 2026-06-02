@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowUpRightIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
@@ -119,9 +120,15 @@ export default function TopicContent() {
     }
 
     return (
-        <div className="w-full mx-auto max-w-3xl py-16 px-10 space-y-10">
+        <div className="w-full mx-auto max-w-3xl py-8 sm:py-16 px-4 sm:px-10 space-y-8 sm:space-y-10">
+            <Link
+                href="/dashboard/topics"
+                className="md:hidden inline-flex items-center gap-1 text-sm text-black/60 hover:text-black"
+            >
+                {"← Retour aux sujets"}
+            </Link>
             <div className="text-center space-y-3">
-                <div className="flex items-center justify-center gap-3">
+                <div className="flex flex-wrap items-center justify-center gap-3">
                     <Badge color={cluster.is_published ? "success" : "gray"}>
                         {cluster.is_published ? "Publié" : "Brouillon"}
                     </Badge>
@@ -185,7 +192,7 @@ export default function TopicContent() {
             )}
 
             <div
-                className="h-[400px] rounded-lg relative bg-black bg-cover bg-center"
+                className="h-56 sm:h-[400px] rounded-lg relative bg-black bg-cover bg-center"
                 style={heroImage ? { backgroundImage: `url(${heroImage})` } : undefined}
             />
 
