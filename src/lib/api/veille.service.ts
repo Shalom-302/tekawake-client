@@ -9,6 +9,9 @@ import axiosClient from "./axios-client";
 export type VeilleStatus = "PENDING" | "SUCCESS" | "FAILED";
 export type ArticleStatus = "PENDING" | "PROCESSED" | "FAILED";
 
+// Providers LLM supportés par le backend (cf. /veille/run).
+export type LlmProvider = "deepseek" | "openai" | "anthropic" | "ollama";
+
 export interface ArticleAnalysis {
     impact_afrique: string;
     problematique_africaine: string;
@@ -340,8 +343,14 @@ const veilleService = {
         return { veille: data, error, isLoading, refreshVeille: mutate };
     },
 
-    async runVeille(query: string): Promise<void> {
-        await axiosClient.post("/veille/run", null, { params: { query } });
+    async runVeille(
+        query: string,
+        llm_provider: LlmProvider = "deepseek",
+        ollama_model?: string,
+    ): Promise<void> {
+        const params: QueryParams = { query, llm_provider };
+        if (llm_provider === "ollama" && ollama_model) params.ollama_model = ollama_model;
+        await axiosClient.post("/veille/run", null, { params });
         await globalMutate(
             key => typeof key === "string" && (key === VEILLES || key.startsWith(`${VEILLES}?`)),
         );
