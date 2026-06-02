@@ -12,6 +12,9 @@
 services:
   web:
     image: ghcr.io/shalom-302/tekawake-client:latest
+    # Force le re-pull de :latest à chaque deploy (sinon `up -d` garde l'image
+    # locale et ne récupère jamais la nouvelle build → client figé sur l'ancien).
+    pull_policy: always
     restart: unless-stopped
     expose:
       - "3000"        # interne : Traefik route via dokploy-network
