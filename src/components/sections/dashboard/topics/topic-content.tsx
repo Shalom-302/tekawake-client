@@ -17,6 +17,8 @@ export default function TopicContent() {
         veilleService.useClusterDetail(clusterId);
     const { imageUrls } = veilleService.useClusterImage(clusterId);
     const [publishing, setPublishing] = useState(false);
+    const [generating, setGenerating] = useState(false);
+    const [genNotice, setGenNotice] = useState<string | null>(null);
 
     async function togglePublish() {
         if (!cluster) return;
@@ -33,9 +35,27 @@ export default function TopicContent() {
         }
     }
 
+    async function generateContent() {
+        if (!cluster) return;
+        setGenerating(true);
+        setGenNotice(null);
+        try {
+            // Route combinée : génère résumé + slides (tâche asynchrone Celery).
+            await veilleService.generateClusterContent(cluster.id);
+            setGenNotice(
+                "Génération lancée — le résumé et les slides apparaîtront dans quelques instants.",
+            );
+        } catch {
+            setGenNotice("Impossible de lancer la génération du contenu.");
+        } finally {
+            setGenerating(false);
+        }
+    }
+
     const slides = cluster?.slides ?? [];
     const articles = cluster?.articles ?? [];
     const heroImage = imageUrls?.[0];
+    const hasContent = Boolean(cluster?.summary_article) && slides.length > 0;
 
     const carouselItems =
         slides.length > 0
@@ -113,6 +133,28 @@ export default function TopicContent() {
                     <span>{`${articles.length} article${articles.length > 1 ? "s" : ""}`}</span>
                 </div>
             </div>
+
+            {!hasContent && (
+                <div className="rounded-lg border border-black/10 bg-black/[0.02] p-5 text-center space-y-3">
+                    <p className="text-sm text-black/70">
+                        {"Ce cluster n'a pas encore de résumé ni de slides."}
+                    </p>
+                    <Button
+                        size="md"
+                        variant="primary"
+                        disabled={generating}
+                        onClick={generateContent}
+                    >
+                        {generating ? "Génération..." : "Générer le contenu"}
+                    </Button>
+                    {genNotice && <p className="text-sm text-black/60">{genNotice}</p>}
+                    {genNotice && (
+                        <Button size="sm" variant="secondary" onClick={() => refreshCluster()}>
+                            {"Rafraîchir"}
+                        </Button>
+                    )}
+                </div>
+            )}
 
             <div
                 className="h-[400px] rounded-lg relative bg-black bg-cover bg-center"
