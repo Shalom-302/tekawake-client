@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { ArrowUpRightIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,11 +13,13 @@ export default function TopicContent() {
     const topicParam = params?.topic_id;
     const clusterId = Array.isArray(topicParam) ? topicParam[0] : topicParam;
 
+    const router = useRouter();
     const { cluster, error, isLoading, refreshCluster } =
         veilleService.useClusterDetail(clusterId);
     const { imageUrls } = veilleService.useClusterImage(clusterId);
     const [publishing, setPublishing] = useState(false);
     const [generating, setGenerating] = useState(false);
+    const [deleting, setDeleting] = useState(false);
     const [genNotice, setGenNotice] = useState<string | null>(null);
 
     async function togglePublish() {
@@ -49,6 +51,24 @@ export default function TopicContent() {
             setGenNotice("Impossible de lancer la génération du contenu.");
         } finally {
             setGenerating(false);
+        }
+    }
+
+    async function removeCluster() {
+        if (!cluster) return;
+        const ok = window.confirm(
+            `Supprimer le cluster « ${cluster.title.slice(0, 60)} » ?\n\n` +
+                "Le résumé et les slides sont supprimés. Les articles restent (ils redeviennent " +
+                "non clusterisés). Action irréversible.",
+        );
+        if (!ok) return;
+        setDeleting(true);
+        try {
+            await veilleService.deleteCluster(cluster.id);
+            router.push("/dashboard/topics");
+        } catch {
+            window.alert("Impossible de supprimer le cluster.");
+            setDeleting(false);
         }
     }
 
@@ -116,6 +136,14 @@ export default function TopicContent() {
                             : cluster.is_published
                               ? "Dépublier"
                               : "Publier sur le site"}
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="secondary-destructive"
+                        disabled={deleting}
+                        onClick={removeCluster}
+                    >
+                        {deleting ? "..." : "Supprimer"}
                     </Button>
                 </div>
                 <h2 className="text-lg sm:text-xl md:text-2xl leading-[140%] font-bold">

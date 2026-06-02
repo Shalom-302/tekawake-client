@@ -94,6 +94,7 @@ function VeilleGroup({ veille }: { veille: VeilleResponse }) {
     const [open, setOpen] = useState(false);
     const [backfilling, setBackfilling] = useState(false);
     const [reindexing, setReindexing] = useState(false);
+    const [deleting, setDeleting] = useState(false);
     const [notice, setNotice] = useState<string | null>(null);
 
     const { count, isLoading, refreshCount } = veilleService.useClustersCount({
@@ -139,6 +140,25 @@ function VeilleGroup({ veille }: { veille: VeilleResponse }) {
         }
     }
 
+    async function removeVeille(e: React.MouseEvent) {
+        e.stopPropagation();
+        const ok = window.confirm(
+            `Supprimer la veille « ${veille.prompt.slice(0, 60)} » ?\n\n` +
+                "Cela supprime définitivement : ses articles, ses clusters (résumés + slides) " +
+                "et ses vecteurs Qdrant. Action irréversible.",
+        );
+        if (!ok) return;
+        setDeleting(true);
+        try {
+            // La route DELETE /veille/{id} cascade articles + clusters et purge Qdrant.
+            await veilleService.deleteVeille(veille.id);
+            // deleteVeille invalide déjà le cache des veilles → la ligne disparaît.
+        } catch {
+            setNotice("Échec de la suppression de la veille.");
+            setDeleting(false);
+        }
+    }
+
     return (
         <li className="rounded-lg">
             <div
@@ -171,6 +191,16 @@ function VeilleGroup({ veille }: { veille: VeilleResponse }) {
                         </span>
                     </div>
                 </div>
+                <Button
+                    size="sm"
+                    variant="secondary-destructive"
+                    className="shrink-0"
+                    disabled={deleting}
+                    onClick={removeVeille}
+                    title="Supprimer la veille (articles + clusters + vecteurs)"
+                >
+                    {deleting ? "..." : "Supprimer"}
+                </Button>
             </div>
 
             {/* Veille sans cluster → clusteriser (et ré-indexer si pas de vecteurs) */}
