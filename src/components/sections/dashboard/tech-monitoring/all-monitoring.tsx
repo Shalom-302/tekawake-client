@@ -13,7 +13,8 @@ import { ChevronRightIcon } from "@/components/icons";
 import { Dialog } from "@/components/ui/dialog";
 import { InputForm } from "@/components/ui/input";
 import { Form } from "@/components/ui/form";
-import veilleService, { VeilleStatus, LlmProvider } from "@/lib/api/veille.service";
+import { DropdownMenu, DropdownDotsButton } from "@/components/ui/dropdown-menu";
+import veilleService, { VeilleStatus, LlmProvider, VeilleResponse } from "@/lib/api/veille.service";
 
 const PROVIDERS: LlmProvider[] = ["deepseek", "openai", "anthropic", "ollama"];
 
@@ -49,8 +50,30 @@ export default function AllMonitoring() {
     const [submitting, setSubmitting] = useState(false);
     const [serverError, setServerError] = useState<string | null>(null);
 
+    // Suppression : veille ciblée par la confirmation (null = dialog fermé).
+    const [deleteTarget, setDeleteTarget] = useState<VeilleResponse | null>(null);
+    const [deleting, setDeleting] = useState(false);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
+
     const { veilles, error, isLoading, refreshVeilles } = veilleService.useVeilles({ limit: 100 });
     const list = veilles ?? [];
+
+    async function handleDelete() {
+        if (!deleteTarget) return;
+        setDeleting(true);
+        setDeleteError(null);
+        try {
+            await veilleService.deleteVeille(deleteTarget.id);
+            await refreshVeilles();
+            setDeleteTarget(null);
+        } catch (e) {
+            setDeleteError(
+                e instanceof Error ? e.message : "Impossible de supprimer la veille.",
+            );
+        } finally {
+            setDeleting(false);
+        }
+    }
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -191,8 +214,32 @@ export default function AllMonitoring() {
                                         <Badge color="gray">{providerLabel(veille.llm_provider)}</Badge>
                                     </div>
                                 </div>
-                                <div className="shrink-0 flex items-center gap-6">
+                                <div className="shrink-0 flex items-center gap-4">
                                     <Badge color={statusInfo.color}>{statusInfo.label}</Badge>
+                                    <DropdownMenu
+                                        trigger={<DropdownDotsButton />}
+                                        align="end"
+                                        contentClassName="min-w-[200px]"
+                                        items={[
+                                            {
+                                                id: "view",
+                                                label: "Voir le détail",
+                                                onClick: () => {
+                                                    window.location.href = `/dashboard/tech-monitoring/one/${veille.id}`;
+                                                },
+                                            },
+                                            { id: "sep", type: "separator" },
+                                            {
+                                                id: "delete",
+                                                label: "Supprimer la veille",
+                                                variant: "destructive",
+                                                onClick: () => {
+                                                    setDeleteError(null);
+                                                    setDeleteTarget(veille);
+                                                },
+                                            },
+                                        ]}
+                                    />
                                     <Link
                                         href={`/dashboard/tech-monitoring/one/${veille.id}`}
                                         className="h-6 w-6 shrink-0 flex items-center justify-center"
@@ -205,6 +252,45 @@ export default function AllMonitoring() {
                     );
                 })}
             </div>
+
+            <Dialog
+                open={!!deleteTarget}
+                onOpenChange={isOpen => {
+                    if (!isOpen) setDeleteTarget(null);
+                }}
+                trigger={<span className="hidden" aria-hidden />}
+                title="Supprimer la veille"
+                description="Cette action supprime définitivement la veille, ses articles et les vecteurs associés. Elle est irréversible."
+                content={
+                    <div className="py-2 space-y-4">
+                        {deleteTarget && (
+                            <p className="text-sm">
+                                {"Veille : "}
+                                <span className="font-medium">{deleteTarget.prompt}</span>
+                            </p>
+                        )}
+                        {deleteError && <p className="text-sm text-red-600">{deleteError}</p>}
+                        <div className="flex justify-end gap-3">
+                            <Button
+                                variant="secondary"
+                                size="md"
+                                onClick={() => setDeleteTarget(null)}
+                                disabled={deleting}
+                            >
+                                {"Annuler"}
+                            </Button>
+                            <Button
+                                variant="primary-destructive"
+                                size="md"
+                                onClick={handleDelete}
+                                disabled={deleting}
+                            >
+                                {deleting ? "Suppression..." : "Supprimer"}
+                            </Button>
+                        </div>
+                    </div>
+                }
+            />
         </section>
     );
 }
